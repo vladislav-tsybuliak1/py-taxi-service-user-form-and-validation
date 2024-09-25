@@ -6,7 +6,7 @@ from django.core.validators import RegexValidator
 from taxi.models import Car
 
 
-class LicenseNumberMixin(forms.ModelForm):
+class DriverLicenseUpdateForm(forms.ModelForm):
     license_number = forms.CharField(
         required=True,
         max_length=8,
@@ -20,8 +20,12 @@ class LicenseNumberMixin(forms.ModelForm):
         ]
     )
 
+    class Meta:
+        model = get_user_model()
+        fields = ("license_number",)
 
-class DriverCreationForm(LicenseNumberMixin, UserCreationForm):
+
+class DriverCreationForm(DriverLicenseUpdateForm, UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = get_user_model()
         fields = UserCreationForm.Meta.fields + (
@@ -29,12 +33,6 @@ class DriverCreationForm(LicenseNumberMixin, UserCreationForm):
             "last_name",
             "license_number",
         )
-
-
-class DriverLicenseUpdateForm(LicenseNumberMixin, forms.ModelForm):
-    class Meta:
-        model = get_user_model()
-        fields = ("license_number",)
 
 
 class CarForm(forms.ModelForm):

@@ -6,8 +6,8 @@ from django.urls import reverse_lazy, reverse
 from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-from .forms import DriverCreationForm, DriverLicenseUpdateForm, CarForm
-from .models import Car, Manufacturer
+from taxi.forms import DriverCreationForm, DriverLicenseUpdateForm, CarForm
+from taxi.models import Car, Manufacturer
 
 
 @login_required
@@ -63,6 +63,16 @@ class CarListView(LoginRequiredMixin, generic.ListView):
 
 class CarDetailView(LoginRequiredMixin, generic.DetailView):
     model = Car
+    queryset = Car.objects.prefetch_related("drivers")
+
+    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        car = self.get_object()
+        if self.request.user in car.drivers.all():
+            car.drivers.remove(self.request.user)
+        else:
+            car.drivers.add(self.request.user)
+
+        return redirect("taxi:car-detail", pk=car.pk)
 
 
 class CarCreateView(LoginRequiredMixin, generic.CreateView):
@@ -75,10 +85,8 @@ class CarCreateView(LoginRequiredMixin, generic.CreateView):
 
 class CarUpdateView(LoginRequiredMixin, generic.UpdateView):
     model = Car
-    form_class = CarForm
-
-    def get_success_url(self) -> str:
-        return reverse("taxi:car-detail", kwargs={"pk": self.object.id})
+    fields = "__all__"
+    success_url = reverse_lazy("taxi:car-list")
 
 
 class CarDeleteView(LoginRequiredMixin, generic.DeleteView):
@@ -111,17 +119,3 @@ class DriverDeleteView(LoginRequiredMixin, generic.DeleteView):
 class DriverUpdateLicenseView(LoginRequiredMixin, generic.UpdateView):
     model = get_user_model()
     form_class = DriverLicenseUpdateForm
-
-
-@login_required
-def add_driver(request: HttpRequest, pk: int) -> HttpResponse:
-    car = get_object_or_404(Car, pk=pk)
-    car.drivers.add(request.user)
-    return redirect(reverse("taxi:car-detail", kwargs={"pk": car.pk}))
-
-
-@login_required
-def remove_driver(request: HttpRequest, pk: int) -> HttpResponse:
-    car = get_object_or_404(Car, pk=pk)
-    car.drivers.remove(request.user)
-    return redirect(reverse("taxi:car-detail", kwargs={"pk": car.pk}))
